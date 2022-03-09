@@ -1,0 +1,30 @@
+﻿{
+    "id":  "d105a9fb-bcf3-4e99-b765-3199aac358f2",
+    "name":  "CreateTestUsers",
+    "publisher":  "Microsoft",
+    "version":  "13.0.0.0",
+    "brief":  "",
+    "description":  "",
+    "platform":  "13.0.0.0",
+    "application":  "13.0.0.0",
+    "showMyCode":  true,
+    "runtime":  "2.0",
+    "logo":  "",
+    "url":  "",
+    "EULA":  "",
+    "privacyStatement":  "",
+    "help":  "",
+    "target":  "Internal",
+    "screenshots":  [
+
+                    ],
+    "dependencies":  [
+
+                     ],
+    "idRanges":  [
+
+                 ],
+    "features":  [
+
+                 ]
+}
