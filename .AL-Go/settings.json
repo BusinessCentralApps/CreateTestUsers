@@ -1,4 +1,4 @@
-{
+﻿{
     "type":  "PTE",
     "country":  "w1",
     "enablePerTenantExtensionCop":  false,
@@ -6,8 +6,10 @@
     "applicationDependency":  "15.0.0.0",
     "doNotRunTests":  true,
     "appFolders":  [
+
                    ],
     "testFolders":  [
                         "CreateTestUsers"
-                    ]
+                    ],
+    "RepoVersion":  "15.0"
 }
