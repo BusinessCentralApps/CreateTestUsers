@@ -2,8 +2,8 @@
     "type":  "PTE",
     "country":  "w1",
     "enablePerTenantExtensionCop":  false,
-    "artifact":  "/onprem/13/w1/latest",
-    "applicationDependency":  "13.0.0.0",
+    "artifact":  "/onprem/15/w1/latest",
+    "applicationDependency":  "15.0.0.0",
     "doNotRunTests":  true,
     "appFolders":  [
                    ],
