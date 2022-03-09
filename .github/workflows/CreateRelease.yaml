@@ -1,4 +1,4 @@
-name: Create release
+﻿name: Create release
 
 on:
   workflow_dispatch:
@@ -192,12 +192,12 @@ jobs:
                   if ($name -like '*Apps-*') {
                       $idx = $name.indexOf('Apps-')
                       $version = $name.SubString($idx+5)
-                      $name = "$($name.SubString(0,$idx+4)).zip"
-                
-                      Write-Host "Publishing $version/$name"
-                      Set-AzureStorageBlobContent -Context $storageContext -CloudBlobContainer $storageContainer.CloudBlobContainer -File '${{ matrix.name }}.zip' -blob "$version/$name"
-                      Write-Host "Publishing latest/$name"
-                      Set-AzureStorageBlobContent -Context $storageContext -CloudBlobContainer $storageContainer.CloudBlobContainer -File '${{ matrix.name }}.zip' -blob "latest/$name"
+                      $name = "$($name.SubString(0,$idx+4)).zip".ToLowerInvariant()
+
+                      "$version/$name", "latest/$name" | ForEach-Object {
+                          Write-Host "Publishing $_"
+                          Set-AzureStorageBlobContent -Context $storageContext -CloudBlobContainer $storageContainer.CloudBlobContainer -File '${{ matrix.name }}.zip' -blob $_ -Force
+                      }
                   }
               }
               catch {
