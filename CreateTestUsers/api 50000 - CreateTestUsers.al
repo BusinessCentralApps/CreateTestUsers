@@ -38,7 +38,15 @@ page 50000 CreateTestUsers
         case Name of
             'CreateTestUsers':
                 begin
-                    CreateTestUsers(Value);
+                    CreateTestUsers(Value, 'All');
+                end;
+            'CreateTestUsersEssential':
+                begin
+                    CreateTestUsers(Value, 'Essential');
+                end;
+            'CreateTestUsersPremium':
+                begin
+                    CreateTestUsers(Value, 'Premium');
                 end;
             'SetAdminUserPremium':
                 begin
@@ -81,11 +89,11 @@ page 50000 CreateTestUsers
         AssignPlanUserGroupsToUser(InputUserName, PremiumPlanTxt);
     end;
 
-    local procedure CreateTestUsers(InputPassword: Text[80])
+    local procedure CreateTestUsers(InputPassword: Text[80]; select: Text)
     begin
-        CreateUsers(InputPassword);
-        AssignPlansToUsers;
-        AssignPlanUserGroupsToUsers;
+        CreateUsers(InputPassword, select);
+        AssignPlansToUsers(select);
+        AssignPlanUserGroupsToUsers(select);
     end;
 
     local procedure AddMySuperUser()
@@ -93,12 +101,14 @@ page 50000 CreateTestUsers
         CODEUNIT.Run(CODEUNIT::"Users - Create Super User");
     end;
 
-    local procedure CreateUsers(InputPassword: Text[80])
+    local procedure CreateUsers(InputPassword: Text[80]; select: Text)
     begin
         CreateUser(DelegatedAdminUserNameTok, DelegatedAdminFullNameTxt, InputPassword);
         CreateUser(InternalAdminUserNameTok, InternalAdminFullNameTxt, InputPassword);
-        CreateUser(PremiumUserNameTok, PremiumFullNameTxt, InputPassword);
-        CreateUser(EssentialUserNameTok, EssentialFullNameTxt, InputPassword);
+        if (select = 'All') or (select = 'Premium') then
+            CreateUser(PremiumUserNameTok, PremiumFullNameTxt, InputPassword);
+        if (select = 'All') or (select = 'Essential') then
+            CreateUser(EssentialUserNameTok, EssentialFullNameTxt, InputPassword);
         CreateUser(TeamMemberUserNameTok, TeamMemberFullNameTxt, InputPassword);
         CreateUser(ExternalAccountantUserNameTok, ExternalAccountantFullNameTxt, InputPassword);
     end;
@@ -131,12 +141,14 @@ page 50000 CreateTestUsers
         exit(not User.IsEmpty);
     end;
 
-    local procedure AssignPlansToUsers()
+    local procedure AssignPlansToUsers(select: Text)
     begin
         AssignPlanToUser(DelegatedAdminUserNameTok, DelegatedAdminPlanTxt);
         AssignPlanToUser(InternalAdminUserNameTok, InternalAdminPlanTxt);
-        AssignPlanToUser(PremiumUserNameTok, PremiumPlanTxt);
-        AssignPlanToUser(EssentialUserNameTok, EssentialPlanTxt);
+        if (select = 'All') or (select = 'Premium') then
+            AssignPlanToUser(PremiumUserNameTok, PremiumPlanTxt);
+        if (select = 'All') or (select = 'Essential') then
+            AssignPlanToUser(EssentialUserNameTok, EssentialPlanTxt);
         AssignPlanToUser(TeamMemberUserNameTok, TeamMemberPlanTxt);
         AssignPlanToUser(ExternalAccountantUserNameTok, ExternalAccountantPlanTxt);
     end;
@@ -154,12 +166,14 @@ page 50000 CreateTestUsers
         AzureADPlanTestLibrary.AssignUserToPlan(User."User Security ID", InputPlanID);
     end;
 
-    local procedure AssignPlanUserGroupsToUsers()
+    local procedure AssignPlanUserGroupsToUsers(select: Text)
     begin
         AssignPlanUserGroupsToUser(DelegatedAdminUserNameTok, DelegatedAdminPlanTxt);
         AssignPlanUserGroupsToUser(InternalAdminUserNameTok, InternalAdminPlanTxt);
-        AssignPlanUserGroupsToUser(PremiumUserNameTok, PremiumPlanTxt);
-        AssignPlanUserGroupsToUser(EssentialUserNameTok, EssentialPlanTxt);
+        if (select = 'All') or (select = 'Premium') then
+            AssignPlanUserGroupsToUser(PremiumUserNameTok, PremiumPlanTxt);
+        if (select = 'All') or (select = 'Essential') then
+            AssignPlanUserGroupsToUser(EssentialUserNameTok, EssentialPlanTxt);
         AssignPlanUserGroupsToUser(TeamMemberUserNameTok, TeamMemberPlanTxt);
         AssignPlanUserGroupsToUser(ExternalAccountantUserNameTok, ExternalAccountantPlanTxt);
     end;
