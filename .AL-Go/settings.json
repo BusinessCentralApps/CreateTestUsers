@@ -9,5 +9,6 @@
                    ],
     "testFolders":  [
                         "CreateTestUsers"
-                    ]
+                    ],
+    "RepoVersion": "15.0"
 }
