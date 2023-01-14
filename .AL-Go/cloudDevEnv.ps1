@@ -5,22 +5,31 @@
 #
 Param(
     [string] $environmentName = "",
-    [bool] $reuseExistingEnvironment
+    [bool] $reuseExistingEnvironment,
+    [switch] $fromVSCode
 )
 
 $ErrorActionPreference = "stop"
 Set-StrictMode -Version 2.0
 
-$ALGoHelperPath = "$([System.IO.Path]::GetTempFileName()).ps1"
+try {
 $webClient = New-Object System.Net.WebClient
 $webClient.CachePolicy = New-Object System.Net.Cache.RequestCachePolicy -argumentList ([System.Net.Cache.RequestCacheLevel]::NoCacheNoStore)
 $webClient.Encoding = [System.Text.Encoding]::UTF8
+Write-Host "Downloading GitHub Helper module"
+$GitHubHelperPath = "$([System.IO.Path]::GetTempFileName()).psm1"
+$webClient.DownloadFile('https://raw.githubusercontent.com/freddydk/AL-Go-Actions/main/Github-Helper.psm1', $GitHubHelperPath)
+Write-Host "Downloading AL-Go Helper script"
+$ALGoHelperPath = "$([System.IO.Path]::GetTempFileName()).ps1"
 $webClient.DownloadFile('https://raw.githubusercontent.com/freddydk/AL-Go-Actions/main/AL-Go-Helper.ps1', $ALGoHelperPath)
-. $ALGoHelperPath -local
 
+Import-Module $GitHubHelperPath
+. $ALGoHelperPath -local
+    
 $baseFolder = Join-Path $PSScriptRoot ".." -Resolve
 
 Clear-Host
+Write-Host
 Write-Host -ForegroundColor Yellow @'
    _____ _                 _   _____             ______            
   / ____| |               | | |  __ \           |  ____|           
@@ -37,6 +46,10 @@ All apps and test apps will be compiled and published to the environment in the 
 The script will also modify launch.json to have a "Cloud Sandbox (<name>)" configuration point to your environment.
 
 '@
+
+if (Test-Path (Join-Path $PSScriptRoot "NewBcContainer.ps1")) {
+    Write-Host -ForegroundColor Red "WARNING: The project has a NewBcContainer override defined. Typically, this means that you cannot run a cloud development environment"
+}
 
 $settings = ReadSettings -baseFolder $baseFolder -userName $env:USERNAME
 
@@ -63,3 +76,12 @@ CreateDevEnv `
     -environmentName $environmentName `
     -reuseExistingEnvironment:$reuseExistingEnvironment `
     -baseFolder $baseFolder
+}
+catch {
+    Write-Host -ForegroundColor Red "Error: $($_.Exception.Message)`nStacktrace: $($_.scriptStackTrace)"
+}
+finally {
+    if ($fromVSCode) {
+        Read-Host "Press ENTER to close this window"
+    }
+}
