@@ -1,4 +1,5 @@
 {
-  "templateUrl": "https://github.com/freddydk/AL-Go@bcptreport",
-  "type": "PTE"
+  "templateUrl": "https://github.com/mazhelez/AL-Go@fix-incremental-build",
+  "type": "PTE",
+  "templateSha": "be9250487b32dac0232aafe5a7f99bbbb6fe7de7"
 }
