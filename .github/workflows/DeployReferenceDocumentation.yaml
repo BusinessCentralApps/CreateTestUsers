@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
   actions: read
   pages: write
   id-token: write
@@ -26,23 +26,23 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Initialize the workflow
         id: init
-        uses: freddydk/AL-Go/Actions/WorkflowInitialize@nuget
+        uses: freddydk/AL-Go/Actions/WorkflowInitialize@lowhanging
         with:
           shell: powershell
           eventId: "DO0097"
         
       - name: Read settings
-        uses: freddydk/AL-Go/Actions/ReadSettings@nuget
+        uses: freddydk/AL-Go/Actions/ReadSettings@lowhanging
         with:
           shell: powershell
 
       - name: Determine Deployment Environments
         id: DetermineDeploymentEnvironments
-        uses: freddydk/AL-Go/Actions/DetermineDeploymentEnvironments@nuget
+        uses: freddydk/AL-Go/Actions/DetermineDeploymentEnvironments@lowhanging
         env:
           GITHUB_TOKEN: ${{ github.token }}
         with:
@@ -52,20 +52,20 @@ jobs:
             
       - name: Setup Pages
         if: steps.DetermineDeploymentEnvironments.outputs.deployALDocArtifact == 1
-        uses: actions/configure-pages@v3
+        uses: actions/configure-pages@v5
         
       - name: Build Reference Documentation
-        uses: freddydk/AL-Go/Actions/BuildReferenceDocumentation@nuget
+        uses: freddydk/AL-Go/Actions/BuildReferenceDocumentation@lowhanging
         with:
           shell: powershell
           artifacts: 'latest'
         
       - name: Upload pages artifact
-        uses: actions/upload-pages-artifact@v2
+        uses: actions/upload-pages-artifact@v3
         with:
           path: ".aldoc/_site/"
         
       - name: Deploy to GitHub Pages
         if: steps.DetermineDeploymentEnvironments.outputs.deployALDocArtifact == 1
         id: deployment
-        uses: actions/deploy-pages@v2
+        uses: actions/deploy-pages@v4

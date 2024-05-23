@@ -5,6 +5,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 defaults:
   run:
@@ -29,25 +30,25 @@ jobs:
       workflowDepth: ${{ steps.DetermineWorkflowDepth.outputs.WorkflowDepth }}
     steps:
       - name: Dump Workflow Information
-        uses: freddydk/AL-Go/Actions/DumpWorkflowInfo@nuget
+        uses: freddydk/AL-Go/Actions/DumpWorkflowInfo@lowhanging
         with:
           shell: powershell
 
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           lfs: true
 
       - name: Initialize the workflow
         id: init
-        uses: freddydk/AL-Go/Actions/WorkflowInitialize@nuget
+        uses: freddydk/AL-Go/Actions/WorkflowInitialize@lowhanging
         with:
           shell: powershell
           eventId: "DO0099"
 
       - name: Read settings
         id: ReadSettings
-        uses: freddydk/AL-Go/Actions/ReadSettings@nuget
+        uses: freddydk/AL-Go/Actions/ReadSettings@lowhanging
         with:
           shell: powershell
 
@@ -58,7 +59,7 @@ jobs:
 
       - name: Determine Projects To Build
         id: determineProjectsToBuild
-        uses: freddydk/AL-Go/Actions/DetermineProjectsToBuild@nuget
+        uses: freddydk/AL-Go/Actions/DetermineProjectsToBuild@lowhanging
         with:
           shell: powershell
           maxBuildDepth: ${{ env.workflowDepth }}
@@ -91,11 +92,11 @@ jobs:
     runs-on: [ windows-latest ]
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Finalize the workflow
         id: PostProcess
-        uses: freddydk/AL-Go/Actions/WorkflowPostProcess@nuget
+        uses: freddydk/AL-Go/Actions/WorkflowPostProcess@lowhanging
         with:
           shell: powershell
           eventId: "DO0099"

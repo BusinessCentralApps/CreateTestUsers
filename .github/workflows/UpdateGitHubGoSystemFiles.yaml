@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       templateUrl:
-        description: Template Repository URL (current is https://github.com/freddydk/AL-Go@nuget)
+        description: Template Repository URL (current is https://github.com/freddydk/AL-Go@lowhanging)
         required: false
         default: ''
       downloadLatest:
@@ -29,33 +29,34 @@ env:
 
 jobs:
   UpdateALGoSystemFiles:
+    name: 'Update AL-Go System Files'
     needs: [ ]
     runs-on: [ windows-latest ]
     steps:
       - name: Dump Workflow Information
-        uses: freddydk/AL-Go/Actions/DumpWorkflowInfo@nuget
+        uses: freddydk/AL-Go/Actions/DumpWorkflowInfo@lowhanging
         with:
           shell: powershell
 
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Initialize the workflow
         id: init
-        uses: freddydk/AL-Go/Actions/WorkflowInitialize@nuget
+        uses: freddydk/AL-Go/Actions/WorkflowInitialize@lowhanging
         with:
           shell: powershell
           eventId: "DO0098"
 
       - name: Read settings
-        uses: freddydk/AL-Go/Actions/ReadSettings@nuget
+        uses: freddydk/AL-Go/Actions/ReadSettings@lowhanging
         with:
           shell: powershell
           get: templateUrl
 
       - name: Read secrets
         id: ReadSecrets
-        uses: freddydk/AL-Go/Actions/ReadSecrets@nuget
+        uses: freddydk/AL-Go/Actions/ReadSecrets@lowhanging
         with:
           shell: powershell
           gitHubSecrets: ${{ toJson(secrets) }}
@@ -72,37 +73,50 @@ jobs:
             Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "templateUrl=$templateUrl"
           }
 
-      - name: Calculate Input
-        env:
-          directCommit: '${{ github.event.inputs.directCommit }}'
-          downloadLatest: ${{ github.event.inputs.downloadLatest }}
-          eventName: ${{ github.event_name }}
-        run: |
-          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-          $directCommit = $ENV:directCommit
-          $downloadLatest = $ENV:downloadLatest
-          Write-Host $ENV:eventName
-          if ($ENV:eventName -eq 'schedule') {
-            Write-Host "Running Update AL-Go System Files on a schedule. Setting DirectCommit and DownloadLatest to true"
-            $directCommit = 'true'
-            $downloadLatest = 'true'
-          }
-          Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "directCommit=$directCommit"
-          Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "downloadLatest=$downloadLatest"
-
-      - name: Update AL-Go system files
-        uses: freddydk/AL-Go/Actions/CheckForUpdates@nuget
+      - name: Update AL-Go system files (manual trigger)
+        if: github.event_name == 'workflow_dispatch'
+        uses: freddydk/AL-Go/Actions/CheckForUpdates@lowhanging
         with:
           shell: powershell
           token: ${{ fromJson(steps.ReadSecrets.outputs.Secrets).ghTokenWorkflow }}
-          downloadLatest: ${{ env.downloadLatest }}
+          downloadLatest: ${{ github.event.inputs.downloadLatest }}
           update: 'Y'
           templateUrl: ${{ env.templateUrl }}
-          directCommit: ${{ env.directCommit }}
+          directCommit: ${{ github.event.inputs.directCommit }}
 
+      - name: Update AL-Go system files (scheduled trigger - try direct commit)
+        if: github.event_name == 'schedule'
+        continue-on-error: true
+        uses: freddydk/AL-Go/Actions/CheckForUpdates@lowhanging
+        with:
+          shell: powershell
+          token: ${{ fromJson(steps.ReadSecrets.outputs.Secrets).ghTokenWorkflow }}
+          downloadLatest: true
+          update: 'Y'
+          templateUrl: ${{ env.templateUrl }}
+          directCommit: true
+
+      - name: Update AL-Go system files (scheduled trigger - try pull request)
+        if: env.UpdateStatus != 'Success' && github.event_name == 'schedule'
+        uses: freddydk/AL-Go/Actions/CheckForUpdates@lowhanging
+        with:
+          shell: powershell
+          token: ${{ fromJson(steps.ReadSecrets.outputs.Secrets).ghTokenWorkflow }}
+          downloadLatest: true
+          update: 'Y'
+          templateUrl: ${{ env.templateUrl }}
+          directCommit: false
+
+      - name: Report error
+        if: env.UpdateStatus != 'Success'
+        run: |
+          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
+          Write-Host "::ERROR::$env:UpdateStatus"
+          exit 1
+  
       - name: Finalize the workflow
         if: always()
-        uses: freddydk/AL-Go/Actions/WorkflowPostProcess@nuget
+        uses: freddydk/AL-Go/Actions/WorkflowPostProcess@lowhanging
         with:
           shell: powershell
           eventId: "DO0098"

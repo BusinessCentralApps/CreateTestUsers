@@ -35,29 +35,29 @@ jobs:
       deviceCode: ${{ steps.Authenticate.outputs.deviceCode }}
     steps:
       - name: Dump Workflow Information
-        uses: freddydk/AL-Go/Actions/DumpWorkflowInfo@nuget
+        uses: freddydk/AL-Go/Actions/DumpWorkflowInfo@lowhanging
         with:
           shell: powershell
 
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Initialize the workflow
         id: init
-        uses: freddydk/AL-Go/Actions/WorkflowInitialize@nuget
+        uses: freddydk/AL-Go/Actions/WorkflowInitialize@lowhanging
         with:
           shell: powershell
           eventId: "DO0097"
 
       - name: Read settings
         id: ReadSettings
-        uses: freddydk/AL-Go/Actions/ReadSettings@nuget
+        uses: freddydk/AL-Go/Actions/ReadSettings@lowhanging
         with:
           shell: powershell
 
       - name: Determine Deployment Environments
         id: DetermineDeploymentEnvironments
-        uses: freddydk/AL-Go/Actions/DetermineDeploymentEnvironments@nuget
+        uses: freddydk/AL-Go/Actions/DetermineDeploymentEnvironments@lowhanging
         env:
           GITHUB_TOKEN: ${{ github.token }}
         with:
@@ -75,7 +75,7 @@ jobs:
 
       - name: Read secrets
         id: ReadSecrets
-        uses: freddydk/AL-Go/Actions/ReadSecrets@nuget
+        uses: freddydk/AL-Go/Actions/ReadSecrets@lowhanging
         if: steps.DetermineDeploymentEnvironments.outputs.UnknownEnvironment == 1
         with:
           shell: powershell
@@ -107,7 +107,7 @@ jobs:
             Write-Host "No AuthContext provided for $envName, initiating Device Code flow"
             $ALGoHelperPath = "$([System.IO.Path]::GetTempFileName()).ps1"
             $webClient = New-Object System.Net.WebClient
-            $webClient.DownloadFile('https://raw.githubusercontent.com/freddydk/AL-Go/nuget/Actions/AL-Go-Helper.ps1', $ALGoHelperPath)
+            $webClient.DownloadFile('https://raw.githubusercontent.com/freddydk/AL-Go/lowhanging/Actions/AL-Go-Helper.ps1', $ALGoHelperPath)
             . $ALGoHelperPath
             DownloadAndImportBcContainerHelper
             $authContext = New-BcAuthContext -includeDeviceLogin -deviceLoginTimeout ([TimeSpan]::FromSeconds(0))
@@ -121,6 +121,9 @@ jobs:
     strategy: ${{ fromJson(needs.Initialization.outputs.environmentsMatrixJson) }}
     runs-on: ${{ fromJson(matrix.os) }}
     name: Deploy to ${{ matrix.environment }}
+    defaults:
+      run:
+        shell: ${{ matrix.shell }}
     environment:
       name: ${{ matrix.environment }}
       url: ${{ steps.Deploy.outputs.environmentUrl }}
@@ -128,7 +131,7 @@ jobs:
       deviceCode: ${{ needs.Initialization.outputs.deviceCode }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: EnvName
         id: envName
@@ -138,28 +141,47 @@ jobs:
           Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "envName=$envName"
 
       - name: Read settings
-        uses: freddydk/AL-Go/Actions/ReadSettings@nuget
+        uses: freddydk/AL-Go/Actions/ReadSettings@lowhanging
         with:
-          shell: powershell
+          shell: ${{ matrix.shell }}
+          get: type,powerPlatformSolutionFolder
 
       - name: Read secrets
         id: ReadSecrets
-        uses: freddydk/AL-Go/Actions/ReadSecrets@nuget
+        uses: freddydk/AL-Go/Actions/ReadSecrets@lowhanging
         with:
-          shell: powershell
+          shell: ${{ matrix.shell }}
           gitHubSecrets: ${{ toJson(secrets) }}
           getSecrets: '${{ steps.envName.outputs.envName }}-AuthContext,${{ steps.envName.outputs.envName }}_AuthContext,AuthContext,${{ steps.envName.outputs.envName }}-EnvironmentName,${{ steps.envName.outputs.envName }}_EnvironmentName,EnvironmentName,projects'
 
-      - name: Deploy
+      - name: Get Artifacts for deployment
+        uses: freddydk/AL-Go/Actions/GetArtifactsForDeployment@lowhanging
+        with:
+          shell: powershell
+          artifactsVersion: ${{ github.event.inputs.appVersion }}
+          artifactsFolder: '.artifacts'
+
+      - name: Deploy to Business Central
         id: Deploy
-        uses: freddydk/AL-Go/Actions/Deploy@nuget
+        uses: freddydk/AL-Go/Actions/Deploy@lowhanging
+        env:
+          Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
+        with:
+          shell: ${{ matrix.shell }}
+          environmentName: ${{ matrix.environment }}
+          artifactsFolder: '.artifacts'
+          type: 'Publish'
+          deploymentEnvironmentsJson: ${{ needs.Initialization.outputs.deploymentEnvironmentsJson }}
+
+      - name: Deploy to Power Platform
+        if: env.type == 'PTE' && env.powerPlatformSolutionFolder != ''
+        uses: freddydk/AL-Go/Actions/DeployPowerPlatform@lowhanging
         env:
           Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
         with:
           shell: powershell
           environmentName: ${{ matrix.environment }}
-          artifacts: ${{ github.event.inputs.appVersion }}
-          type: 'Publish'
+          artifactsFolder: '.artifacts'
           deploymentEnvironmentsJson: ${{ needs.Initialization.outputs.deploymentEnvironmentsJson }}
 
   PostProcess:
@@ -168,11 +190,11 @@ jobs:
     runs-on: [ windows-latest ]
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Finalize the workflow
         id: PostProcess
-        uses: freddydk/AL-Go/Actions/WorkflowPostProcess@nuget
+        uses: freddydk/AL-Go/Actions/WorkflowPostProcess@lowhanging
         with:
           shell: powershell
           eventId: "DO0097"
