@@ -2,14 +2,14 @@
     "type":  "PTE",
     "country":  "w1",
     "enablePerTenantExtensionCop":  false,
-    "artifact":  "/onprem/16/w1/latest",
-    "applicationDependency":  "16.0.0.0",
+    "artifact":  "/onprem/22/w1/first",
+    "applicationDependency":  "22.0.0.0",
     "doNotRunTests":  true,
     "appFolders":  [
                    ],
     "testFolders":  [
                         "CreateTestUsers"
                     ],
-    "RepoVersion": "16.0",
+    "RepoVersion": "22.0",
     "bcContainerHelperVersion":  "dev"
 }

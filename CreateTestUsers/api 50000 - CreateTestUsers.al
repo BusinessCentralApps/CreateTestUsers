@@ -86,7 +86,7 @@ page 50000 CreateTestUsers
         User: Record User;
     begin
         AssignPlanToUser(InputUserName, PremiumPlanTxt);
-        AssignPlanUserGroupsToUser(InputUserName, PremiumPlanTxt);
+        AssignPlanPermissionSetsToUser(InputUserName, PremiumPlanTxt);
     end;
 
     local procedure CreateTestUsers(InputPassword: Text[80]; select: Text)
@@ -168,58 +168,54 @@ page 50000 CreateTestUsers
 
     local procedure AssignPlanUserGroupsToUsers(select: Text)
     begin
-        AssignPlanUserGroupsToUser(DelegatedAdminUserNameTok, DelegatedAdminPlanTxt);
-        AssignPlanUserGroupsToUser(InternalAdminUserNameTok, InternalAdminPlanTxt);
+        AssignPlanPermissionSetsToUser(DelegatedAdminUserNameTok, DelegatedAdminPlanTxt);
+        AssignPlanPermissionSetsToUser(InternalAdminUserNameTok, InternalAdminPlanTxt);
         if (select = 'All') or (select = 'Premium') then
-            AssignPlanUserGroupsToUser(PremiumUserNameTok, PremiumPlanTxt);
+            AssignPlanPermissionSetsToUser(PremiumUserNameTok, PremiumPlanTxt);
         if (select = 'All') or (select = 'Essential') then
-            AssignPlanUserGroupsToUser(EssentialUserNameTok, EssentialPlanTxt);
-        AssignPlanUserGroupsToUser(TeamMemberUserNameTok, TeamMemberPlanTxt);
-        AssignPlanUserGroupsToUser(ExternalAccountantUserNameTok, ExternalAccountantPlanTxt);
+            AssignPlanPermissionSetsToUser(EssentialUserNameTok, EssentialPlanTxt);
+        AssignPlanPermissionSetsToUser(TeamMemberUserNameTok, TeamMemberPlanTxt);
+        AssignPlanPermissionSetsToUser(ExternalAccountantUserNameTok, ExternalAccountantPlanTxt);
     end;
 
-    local procedure AssignPlanUserGroupsToUser(InputUserName: Code[50]; InputPlanID: Guid)
+    local procedure AssignPlanPermissionSetsToUser(InputUserName: Code[50]; InputPlanID: Guid)
     var
         User: Record User;
-        UserGroupPlan: Record "User Group Plan";
+        PermissionSetInPlanBuffer: Record "Permission Set In Plan Buffer";
     begin
         if not GetUser(User, InputUserName) then
             exit;
 
-        if not GetPlanUserGroups(UserGroupPlan, InputPlanID) then
+        if not GetPlanPermissions(PermissionSetInPlanBuffer, InputPlanID) then
             exit;
 
         repeat
-            AssignUserGroupToUser(UserGroupPlan."User Group Code", User."User Security ID");
-        until UserGroupPlan.Next = 0;
+            AssignPermissionSetToUser(PermissionSetInPlanBuffer."Role ID", User."User Security ID");
+        until PermissionSetInPlanBuffer.Next = 0;
     end;
 
-    local procedure AssignUserGroupToUser(InputUserGroupCode: Code[20]; InputUserSecurityID: Guid)
+    local procedure AssignPermissionSetToUser(RoleId: Code[20]; InputUserSecurityID: Guid)
     var
-        UserGroupMember: Record "User Group Member";
+        AccessControl: Record "Access Control";
+        AggregatePermissionSet: Record "Aggregate Permission Set";
     begin
-        if UserGroupIsAssignedToUser(InputUserGroupCode, InputUserSecurityID) then
-            exit;
+        AggregatePermissionSet.SetRange("Role ID", RoleId);
+        AggregatePermissionSet.FindFirst();
 
-        UserGroupMember.Init;
-        UserGroupMember."User Group Code" := InputUserGroupCode;
-        UserGroupMember."User Security ID" := InputUserSecurityID;
-        UserGroupMember.Insert(true);
+        AccessControl."Role Id" := RoleId;
+        AccessControl."User Security ID" := InputUserSecurityID;
+        AccessControl.Scope := AccessControl.Scope::System;
+        AccessControl."App ID" := AggregatePermissionSet."App ID";
+        if AccessControl.Insert() then;
     end;
 
-    local procedure UserGroupIsAssignedToUser(InputUserGroupCode: Code[20]; InputUserSecurityID: Guid): Boolean
+    local procedure GetPlanPermissions(var PermissionSetInPlanBuffer: Record "Permission Set In Plan Buffer"; InputPlanID: Guid): Boolean
     var
-        UserGroupMember: Record "User Group Member";
+        PlanConfiguration: Codeunit "Plan Configuration";
     begin
-        UserGroupMember.SetRange("User Group Code", InputUserGroupCode);
-        UserGroupMember.SetRange("User Security ID", InputUserSecurityID);
-        exit(not UserGroupMember.IsEmpty);
-    end;
-
-    local procedure GetPlanUserGroups(var UserGroupPlan: Record "User Group Plan"; InputPlanID: Guid): Boolean
-    begin
-        UserGroupPlan.SetRange("Plan ID", InputPlanID);
-        exit(UserGroupPlan.FindSet);
+        PlanConfiguration.GetDefaultPermissions(PermissionSetInPlanBuffer);
+        PermissionSetInPlanBuffer.SetRange("Plan ID", InputPlanID);
+        exit(PermissionSetInPlanBuffer.FindSet());
     end;
 
     local procedure GetUser(var User: Record User; InputUserName: Code[50]): Boolean
