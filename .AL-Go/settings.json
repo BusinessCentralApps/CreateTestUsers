@@ -10,6 +10,5 @@
     "testFolders":  [
                         "CreateTestUsers"
                     ],
-    "RepoVersion": "22.0",
-    "bcContainerHelperVersion":  "dev"
+    "RepoVersion": "22.0"
 }
