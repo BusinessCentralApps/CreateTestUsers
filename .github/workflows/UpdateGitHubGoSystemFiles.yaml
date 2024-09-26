@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       templateUrl:
-        description: Template Repository URL (current is https://github.com/freddydk/AL-Go@lowhanging)
+        description: Template Repository URL (current is https://github.com/microsoft/AL-Go-PTE@preview)
         required: false
         default: ''
       downloadLatest:
@@ -17,7 +17,9 @@ on:
         default: false
 
 permissions:
+  actions: read
   contents: read
+  id-token: write
 
 defaults:
   run:
@@ -34,29 +36,28 @@ jobs:
     runs-on: [ windows-latest ]
     steps:
       - name: Dump Workflow Information
-        uses: freddydk/AL-Go/Actions/DumpWorkflowInfo@lowhanging
+        uses: microsoft/AL-Go/Actions/DumpWorkflowInfo@c198d5ffe9434dda2087ec2c5a9edc61e5118f28
         with:
           shell: powershell
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
       - name: Initialize the workflow
         id: init
-        uses: freddydk/AL-Go/Actions/WorkflowInitialize@lowhanging
+        uses: microsoft/AL-Go/Actions/WorkflowInitialize@c198d5ffe9434dda2087ec2c5a9edc61e5118f28
         with:
           shell: powershell
-          eventId: "DO0098"
 
       - name: Read settings
-        uses: freddydk/AL-Go/Actions/ReadSettings@lowhanging
+        uses: microsoft/AL-Go/Actions/ReadSettings@c198d5ffe9434dda2087ec2c5a9edc61e5118f28
         with:
           shell: powershell
           get: templateUrl
 
       - name: Read secrets
         id: ReadSecrets
-        uses: freddydk/AL-Go/Actions/ReadSecrets@lowhanging
+        uses: microsoft/AL-Go/Actions/ReadSecrets@c198d5ffe9434dda2087ec2c5a9edc61e5118f28
         with:
           shell: powershell
           gitHubSecrets: ${{ toJson(secrets) }}
@@ -73,51 +74,40 @@ jobs:
             Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "templateUrl=$templateUrl"
           }
 
-      - name: Update AL-Go system files (manual trigger)
-        if: github.event_name == 'workflow_dispatch'
-        uses: freddydk/AL-Go/Actions/CheckForUpdates@lowhanging
-        with:
-          shell: powershell
-          token: ${{ fromJson(steps.ReadSecrets.outputs.Secrets).ghTokenWorkflow }}
+      - name: Calculate Input
+        env:
+          directCommit: '${{ github.event.inputs.directCommit }}'
           downloadLatest: ${{ github.event.inputs.downloadLatest }}
-          update: 'Y'
-          templateUrl: ${{ env.templateUrl }}
-          directCommit: ${{ github.event.inputs.directCommit }}
-
-      - name: Update AL-Go system files (scheduled trigger - try direct commit)
-        if: github.event_name == 'schedule'
-        continue-on-error: true
-        uses: freddydk/AL-Go/Actions/CheckForUpdates@lowhanging
-        with:
-          shell: powershell
-          token: ${{ fromJson(steps.ReadSecrets.outputs.Secrets).ghTokenWorkflow }}
-          downloadLatest: true
-          update: 'Y'
-          templateUrl: ${{ env.templateUrl }}
-          directCommit: true
-
-      - name: Update AL-Go system files (scheduled trigger - try pull request)
-        if: env.UpdateStatus != 'Success' && github.event_name == 'schedule'
-        uses: freddydk/AL-Go/Actions/CheckForUpdates@lowhanging
-        with:
-          shell: powershell
-          token: ${{ fromJson(steps.ReadSecrets.outputs.Secrets).ghTokenWorkflow }}
-          downloadLatest: true
-          update: 'Y'
-          templateUrl: ${{ env.templateUrl }}
-          directCommit: false
-
-      - name: Report error
-        if: env.UpdateStatus != 'Success'
+          eventName: ${{ github.event_name }}
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-          Write-Host "::ERROR::$env:UpdateStatus"
-          exit 1
-  
-      - name: Finalize the workflow
-        if: always()
-        uses: freddydk/AL-Go/Actions/WorkflowPostProcess@lowhanging
+          $directCommit = $ENV:directCommit
+          $downloadLatest = $ENV:downloadLatest
+          Write-Host $ENV:eventName
+          if ($ENV:eventName -eq 'schedule') {
+            Write-Host "Running Update AL-Go System Files on a schedule. Setting DirectCommit and DownloadLatest to true"
+            $directCommit = 'true'
+            $downloadLatest = 'true'
+          }
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "directCommit=$directCommit"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "downloadLatest=$downloadLatest"
+
+      - name: Update AL-Go system files
+        uses: microsoft/AL-Go/Actions/CheckForUpdates@c198d5ffe9434dda2087ec2c5a9edc61e5118f28
         with:
           shell: powershell
-          eventId: "DO0098"
+          token: ${{ fromJson(steps.ReadSecrets.outputs.Secrets).ghTokenWorkflow }}
+          downloadLatest: ${{ env.downloadLatest }}
+          update: 'Y'
+          templateUrl: ${{ env.templateUrl }}
+          directCommit: ${{ env.directCommit }}
+
+      - name: Finalize the workflow
+        if: always()
+        uses: microsoft/AL-Go/Actions/WorkflowPostProcess@c198d5ffe9434dda2087ec2c5a9edc61e5118f28
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          shell: powershell
           telemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
+          currentJobContext: ${{ toJson(job) }}
